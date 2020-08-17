@@ -1,10 +1,10 @@
-import React, { useRef, useCallback, useContext } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { FiLogIn, FiMail, FiLock } from 'react-icons/fi';
 import { FormHandles } from '@unform/core';
 import { Form } from '@unform/web';
 import * as Yup from 'yup';
 
-import AuthContext from '../../context/AuthContext';
+import { useAuth } from '../../hooks/AuthContext';
 import getValidationErrors from '../../utils/getValidationErrors';
 
 import logoImg from '../../assets/logo.svg';
@@ -14,27 +14,45 @@ import Button from '../../components/Button';
 
 import { Container, Content, Background } from './styles';
 
+interface SignInFormData {
+  email: string;
+  password: string;
+}
+
 const SignIn: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
 
-  const handleSubmit = useCallback(async (data: object) => {
-    formRef.current?.setErrors({});
+  const { signIn } = useAuth();
 
-    try {
-      const schema = Yup.object().shape({
-        email: Yup.string().required().email('Valid e-mail is required'),
-        password: Yup.string().required('Password is required'),
-      });
+  const handleSubmit = useCallback(
+    async (data: SignInFormData) => {
+      formRef.current?.setErrors({});
 
-      await schema.validate(data, {
-        abortEarly: false,
-      });
-    } catch (err) {
-      const errors = getValidationErrors(err);
+      try {
+        const schema = Yup.object().shape({
+          email: Yup.string().required().email('Valid e-mail is required'),
+          password: Yup.string().required('Password is required'),
+        });
 
-      formRef.current?.setErrors(errors);
-    }
-  }, []);
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+
+        signIn({
+          email: data.email,
+          password: data.password,
+        });
+      } catch (err) {
+        if (err instanceof Yup.ValidationError) {
+          const errors = getValidationErrors(err);
+          formRef.current?.setErrors(errors);
+        }
+
+        // toast
+      }
+    },
+    [signIn],
+  );
 
   return (
     <Container>
